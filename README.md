@@ -3,6 +3,8 @@ This project aims to improve a given code snippet of a lexical analyzer using C 
 - Report and identify errors in identifiers and integer literals.
 - Recognize certain keywords and assignment operators.
 
+  Further details and project results are found in the LexicalAnalyser.pdf file attached.
+
 # Details
 Programming Languages
 -----
