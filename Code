@@ -1,0 +1,158 @@
+/* front.c - improved lexical analyzer system */
+#include <stdio.h>
+#include <ctype.h>
+#include <string.h>
+
+/* Global declarations */
+int charClass;
+char lexeme[100];
+char nextChar;
+int lexLen;
+int token;
+int nextToken;
+FILE *in_fp;
+
+/* Function declarations */
+void addChar();
+void getChar();
+void getNonBlank();
+int lex();
+int isKeyword(const char *);
+
+/* Character classes */
+#define LETTER 0
+#define DIGIT 1
+#define UNKNOWN 99
+#define END_OF_FILE -1
+
+/* Token codes */
+#define INT_LIT 10
+#define IDENT 11
+#define ASSIGN_OP 20
+#define ADD_OP 21
+#define SUB_OP 22
+#define MULT_OP 23
+#define DIV_OP 24
+#define LEFT_PAREN 25
+#define RIGHT_PAREN 26
+#define KEYWORD 27
+#define INVALID_ID 28
+#define INVALID_INT 29
+
+/* Main driver */
+int main() {
+    if ((in_fp = fopen("input.txt", "r")) == NULL)
+        printf("ERROR - cannot open input.txt\n");
+    else {
+        getChar();
+        do {
+            lex();
+        } while (nextToken != END_OF_FILE);
+    }
+    return 0;
+}
+int isKeyword(const char *str) {
+    return strcmp(str, "if") == 0 || strcmp(str, "then") == 0 || strcmp(str, "else") == 0;
+}
+int lookup(char ch) {
+    switch (ch) {
+        case '(': addChar(); nextToken = LEFT_PAREN; break;
+        case ')': addChar(); nextToken = RIGHT_PAREN; break;
+        case '+': addChar(); nextToken = ADD_OP; break;
+        case '-': addChar(); nextToken = SUB_OP; break;
+        case '*': addChar(); nextToken = MULT_OP; break;
+        case '/': addChar(); nextToken = DIV_OP; break;
+        case '=': addChar(); nextToken = ASSIGN_OP; break;
+        default: addChar(); nextToken = UNKNOWN; break;
+    }
+    return nextToken;
+}
+void addChar() {
+    if (lexLen <= 98) {
+        lexeme[lexLen++] = nextChar;
+        lexeme[lexLen] = 0;
+    } else {
+        printf("Error - lexeme is too long\n");
+    }
+}
+void getChar() {
+    if ((nextChar = getc(in_fp)) != EOF) {
+        if (isalpha(nextChar))
+            charClass = LETTER;
+        else if (isdigit(nextChar))
+            charClass = DIGIT;
+        else
+            charClass = UNKNOWN;
+    } else {
+        charClass = END_OF_FILE;
+    }
+}
+void getNonBlank() {
+    while (isspace(nextChar))
+        getChar();
+}
+
+int lex() {
+    lexLen = 0;
+    getNonBlank();
+
+    switch (charClass) {
+        case LETTER:
+            addChar();
+            getChar();
+            while (charClass == LETTER || charClass == DIGIT) {
+                addChar();
+                getChar();
+            }
+            if (isKeyword(lexeme))
+                nextToken = KEYWORD;
+            else
+                nextToken = IDENT;
+            break;
+
+        case DIGIT:
+            addChar();
+            getChar();
+            int valid = 1;
+            while (charClass == DIGIT || charClass == LETTER) {
+                if (isalpha(nextChar)) valid = 0;
+                addChar();
+                getChar();
+            }
+            nextToken = valid ? INT_LIT : INVALID_INT;
+            break;
+        case UNKNOWN:
+            lookup(nextChar);
+            getChar();
+            break;
+        case END_OF_FILE:
+            nextToken = END_OF_FILE;
+            strcpy(lexeme, "EOF");
+            break;
+    }
+    if (nextToken == IDENT && isdigit(lexeme[0]))
+        nextToken = INVALID_ID;
+
+    const char *type;
+    switch (nextToken) {
+        case INT_LIT: type = "INTEGER"; break;
+        case IDENT: type = "IDENTIFIER"; break;
+        case KEYWORD: type = "KEYWORD"; break;
+        case ASSIGN_OP: type = "ASSIGN_OP"; break;
+        case ADD_OP: type = "ADD_OP"; break;
+        case SUB_OP: type = "SUB_OP"; break;
+        case MULT_OP: type = "MULT_OP"; break;
+        case DIV_OP: type = "DIV_OP"; break;
+        case LEFT_PAREN: type = "LEFT_PAREN"; break;
+        case RIGHT_PAREN: type = "RIGHT_PAREN"; break;
+        case INVALID_ID: type = "ERROR: INVALID IDENTIFIER"; break;
+        case INVALID_INT: type = "ERROR: INVALID INTEGER LITERAL"; break;
+        case END_OF_FILE: type = "EOF"; break;
+        default: type = "UNKNOWN"; break;
+    }
+
+    printf("Next token is: %d, Next lexeme is %s, Classification: %s\n", nextToken, lexeme, type);
+    return nextToken;
+}
+
+
